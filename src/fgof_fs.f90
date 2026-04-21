@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, mkdir_if_needed, scandir_names, stat_mode, stat_size, unlink_path
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, mkdir_if_needed, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -12,6 +12,7 @@ module fgof_fs
   public :: is_file
   public :: is_symlink
   public :: remove_file
+  public :: remove_tree
   public :: path_exists
   public :: path_info
   public :: current_dir
@@ -197,6 +198,41 @@ contains
 
     success = unlink_path(path)
   end function remove_file
+
+  recursive logical function remove_tree(path) result(success)
+    character(len=*), intent(in) :: path
+    type(path_info) :: info
+    type(directory_entry), allocatable :: entries(:)
+    integer :: i
+
+    info = lstat(path)
+    if (.not. info%exists) then
+      success = .false.
+      return
+    end if
+
+    if (.not. info%is_directory .or. info%is_symlink) then
+      success = .false.
+      return
+    end if
+
+    entries = scandir(path)
+    do i = 1, size(entries)
+      if (entries(i)%info%is_directory .and. .not. entries(i)%info%is_symlink) then
+        if (.not. remove_tree(entries(i)%path)) then
+          success = .false.
+          return
+        end if
+      else
+        if (.not. remove_file(entries(i)%path)) then
+          success = .false.
+          return
+        end if
+      end if
+    end do
+
+    success = rmdir_path(path)
+  end function remove_tree
 
   function make_directory_entry(path, depth) result(entry)
     character(len=*), intent(in) :: path

@@ -15,6 +15,7 @@ module fgof_fs_posix
   public :: lstat_mode
   public :: lstat_size
   public :: mkdir_if_needed
+  public :: rmdir_path
   public :: unlink_path
   public :: scandir_names
   public :: stat_mode
@@ -79,6 +80,12 @@ module fgof_fs_posix
       character(kind=c_char), intent(in) :: pathname(*)
       integer(c_int) :: fgof_fs_unlink_path
     end function fgof_fs_unlink_path
+
+    function fgof_fs_rmdir_path(pathname) bind(C, name="fgof_fs_rmdir_path")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: pathname(*)
+      integer(c_int) :: fgof_fs_rmdir_path
+    end function fgof_fs_rmdir_path
   end interface
 
 contains
@@ -184,6 +191,14 @@ contains
     c_path = to_c_string(path)
     success = (fgof_fs_unlink_path(c_path) /= 0_c_int)
   end function unlink_path
+
+  logical function rmdir_path(path) result(success)
+    character(len=*), intent(in) :: path
+    character(kind=c_char), allocatable :: c_path(:)
+
+    c_path = to_c_string(path)
+    success = (fgof_fs_rmdir_path(c_path) /= 0_c_int)
+  end function rmdir_path
 
   function to_c_string(str) result(buf)
     character(len=*), intent(in) :: str
