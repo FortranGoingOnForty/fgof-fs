@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, lstat_mode, lstat_size, stat_mode, stat_size
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, stat_mode, stat_size
   use fgof_fs_types, only : path_info
   use iso_fortran_env, only : int64
   implicit none
@@ -11,6 +11,7 @@ module fgof_fs
   public :: is_symlink
   public :: path_exists
   public :: path_info
+  public :: current_dir
   public :: lstat
   public :: stat
 

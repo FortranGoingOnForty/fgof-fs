@@ -1,4 +1,5 @@
 #include <sys/stat.h>
+#include <unistd.h>
 
 int fgof_fs_stat_mode(const char *pathname) {
     struct stat st;
@@ -30,4 +31,11 @@ long long fgof_fs_lstat_size(const char *pathname) {
         return -1;
     }
     return (long long)st.st_size;
+}
+
+int fgof_fs_getcwd(char *buffer, int buffer_len) {
+    if (getcwd(buffer, (size_t)buffer_len) == NULL) {
+        return 0;
+    }
+    return 1;
 }
