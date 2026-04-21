@@ -15,3 +15,19 @@ int fgof_fs_lstat_mode(const char *pathname) {
     }
     return (int)st.st_mode;
 }
+
+long long fgof_fs_stat_size(const char *pathname) {
+    struct stat st;
+    if (stat(pathname, &st) != 0) {
+        return -1;
+    }
+    return (long long)st.st_size;
+}
+
+long long fgof_fs_lstat_size(const char *pathname) {
+    struct stat st;
+    if (lstat(pathname, &st) != 0) {
+        return -1;
+    }
+    return (long long)st.st_size;
+}

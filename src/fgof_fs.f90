@@ -1,5 +1,7 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, lstat_mode, stat_mode
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, lstat_mode, lstat_size, stat_mode, stat_size
+  use fgof_fs_types, only : path_info
+  use iso_fortran_env, only : int64
   implicit none
   private
 
@@ -8,6 +10,9 @@ module fgof_fs
   public :: is_file
   public :: is_symlink
   public :: path_exists
+  public :: path_info
+  public :: lstat
+  public :: stat
 
 contains
 
@@ -46,5 +51,45 @@ contains
     mode = lstat_mode(path)
     found = (mode >= 0 .and. iand(mode, S_IFMT) == S_IFLNK)
   end function is_symlink
+
+  function stat(path) result(info)
+    character(len=*), intent(in) :: path
+    type(path_info) :: info
+    integer :: mode
+    integer(int64) :: size_bytes
+
+    mode = stat_mode(path)
+    if (mode < 0) return
+
+    size_bytes = stat_size(path)
+    info = path_info( &
+      exists=.true., &
+      is_file=(iand(mode, S_IFMT) == S_IFREG), &
+      is_directory=(iand(mode, S_IFMT) == S_IFDIR), &
+      is_symlink=.false., &
+      mode=mode, &
+      size=size_bytes &
+    )
+  end function stat
+
+  function lstat(path) result(info)
+    character(len=*), intent(in) :: path
+    type(path_info) :: info
+    integer :: mode
+    integer(int64) :: size_bytes
+
+    mode = lstat_mode(path)
+    if (mode < 0) return
+
+    size_bytes = lstat_size(path)
+    info = path_info( &
+      exists=.true., &
+      is_file=(iand(mode, S_IFMT) == S_IFREG), &
+      is_directory=(iand(mode, S_IFMT) == S_IFDIR), &
+      is_symlink=(iand(mode, S_IFMT) == S_IFLNK), &
+      mode=mode, &
+      size=size_bytes &
+    )
+  end function lstat
 
 end module fgof_fs
