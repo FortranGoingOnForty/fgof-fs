@@ -108,3 +108,7 @@ int fgof_fs_mkdir_if_needed(const char *pathname, int mode) {
 
     return 0;
 }
+
+int fgof_fs_unlink_path(const char *pathname) {
+    return unlink(pathname) == 0 ? 1 : 0;
+}
