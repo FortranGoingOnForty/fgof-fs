@@ -163,3 +163,7 @@ int fgof_fs_copy_file(const char *source, const char *destination) {
 
     return 1;
 }
+
+int fgof_fs_is_executable_path(const char *pathname) {
+    return access(pathname, X_OK) == 0 ? 1 : 0;
+}

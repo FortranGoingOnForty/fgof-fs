@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, copy_file_path, current_dir, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, copy_file_path, current_dir, is_executable_path, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -23,6 +23,7 @@ module fgof_fs
   public :: scandir
   public :: stat
   public :: walk
+  public :: which
 
 contains
 
@@ -275,6 +276,80 @@ contains
 
     success = copy_file_path(source, destination)
   end function copy_file
+
+  function which(name) result(path)
+    character(len=*), intent(in) :: name
+    character(len=:), allocatable :: path
+    character(len=:), allocatable :: command
+    character(len=:), allocatable :: search_path
+    character(len=:), allocatable :: candidate
+    character(len=:), allocatable :: directory
+    integer :: path_len
+    integer :: status
+    integer :: start_idx
+    integer :: end_idx
+
+    command = trim(name)
+    if (len(command) == 0) then
+      path = ""
+      return
+    end if
+
+    if (index(command, "/") > 0) then
+      if (is_file(command) .and. is_executable_path(command)) then
+        path = normalize_path(command)
+      else
+        path = ""
+      end if
+      return
+    end if
+
+    call get_environment_variable("PATH", length=path_len, status=status)
+    if (status /= 0 .or. path_len <= 0) then
+      path = ""
+      return
+    end if
+
+    allocate(character(len=path_len) :: search_path)
+    call get_environment_variable("PATH", value=search_path, status=status)
+    if (status /= 0) then
+      path = ""
+      return
+    end if
+
+    start_idx = 1
+    do while (start_idx <= len(search_path) + 1)
+      if (start_idx > len(search_path)) then
+        directory = ""
+        end_idx = 0
+      else
+        end_idx = index(search_path(start_idx:), ":")
+        if (end_idx == 0) then
+          directory = trim(search_path(start_idx:))
+        else if (end_idx == 1) then
+          directory = ""
+        else
+          directory = trim(search_path(start_idx:start_idx + end_idx - 2))
+        end if
+      end if
+
+      if (len(directory) == 0) then
+        candidate = join_path(".", command)
+      else
+        candidate = join_path(directory, command)
+      end if
+
+      if (is_file(candidate) .and. is_executable_path(candidate)) then
+        path = normalize_path(candidate)
+        return
+      end if
+
+      if (start_idx > len(search_path) .or. end_idx == 0) exit
+      start_idx = start_idx + end_idx
+    end do
+
+    path = ""
+  end function which
 
   function make_directory_entry(path, depth) result(entry)
     character(len=*), intent(in) :: path

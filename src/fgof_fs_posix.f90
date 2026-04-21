@@ -13,6 +13,7 @@ module fgof_fs_posix
 
   public :: current_dir
   public :: copy_file_path
+  public :: is_executable_path
   public :: lstat_mode
   public :: lstat_size
   public :: mkdir_if_needed
@@ -102,6 +103,12 @@ module fgof_fs_posix
       character(kind=c_char), intent(in) :: destination(*)
       integer(c_int) :: fgof_fs_copy_file
     end function fgof_fs_copy_file
+
+    function fgof_fs_is_executable_path(pathname) bind(C, name="fgof_fs_is_executable_path")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: pathname(*)
+      integer(c_int) :: fgof_fs_is_executable_path
+    end function fgof_fs_is_executable_path
   end interface
 
 contains
@@ -237,6 +244,14 @@ contains
     c_destination = to_c_string(destination)
     success = (fgof_fs_copy_file(c_source, c_destination) /= 0_c_int)
   end function copy_file_path
+
+  logical function is_executable_path(path) result(success)
+    character(len=*), intent(in) :: path
+    character(kind=c_char), allocatable :: c_path(:)
+
+    c_path = to_c_string(path)
+    success = (fgof_fs_is_executable_path(c_path) /= 0_c_int)
+  end function is_executable_path
 
   function to_c_string(str) result(buf)
     character(len=*), intent(in) :: str
