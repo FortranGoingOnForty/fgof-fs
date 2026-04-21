@@ -121,3 +121,45 @@ int fgof_fs_rmdir_path(const char *pathname) {
 int fgof_fs_rename_path(const char *source, const char *destination) {
     return rename(source, destination) == 0 ? 1 : 0;
 }
+
+int fgof_fs_copy_file(const char *source, const char *destination) {
+    FILE *src;
+    FILE *dst;
+    unsigned char buffer[8192];
+    size_t read_count;
+
+    src = fopen(source, "rb");
+    if (src == NULL) {
+        return 0;
+    }
+
+    dst = fopen(destination, "wb");
+    if (dst == NULL) {
+        fclose(src);
+        return 0;
+    }
+
+    while ((read_count = fread(buffer, 1, sizeof buffer, src)) > 0) {
+        if (fwrite(buffer, 1, read_count, dst) != read_count) {
+            fclose(src);
+            fclose(dst);
+            unlink(destination);
+            return 0;
+        }
+    }
+
+    if (ferror(src) != 0) {
+        fclose(src);
+        fclose(dst);
+        unlink(destination);
+        return 0;
+    }
+
+    fclose(src);
+    if (fclose(dst) != 0) {
+        unlink(destination);
+        return 0;
+    }
+
+    return 1;
+}

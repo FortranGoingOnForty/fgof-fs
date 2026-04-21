@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, copy_file_path, current_dir, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -8,6 +8,7 @@ module fgof_fs
 
   public :: exists
   public :: directory_entry
+  public :: copy_file
   public :: is_directory
   public :: is_file
   public :: is_symlink
@@ -246,6 +247,34 @@ contains
 
     success = rename_path(source, destination)
   end function move_path
+
+  logical function copy_file(source, destination) result(success)
+    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: destination
+    type(path_info) :: source_info
+    type(path_info) :: destination_info
+
+    source_info = lstat(source)
+    if (.not. source_info%exists) then
+      success = .false.
+      return
+    end if
+
+    if (.not. source_info%is_file .or. source_info%is_symlink) then
+      success = .false.
+      return
+    end if
+
+    destination_info = lstat(destination)
+    if (destination_info%exists) then
+      if (.not. destination_info%is_file .or. destination_info%is_symlink) then
+        success = .false.
+        return
+      end if
+    end if
+
+    success = copy_file_path(source, destination)
+  end function copy_file
 
   function make_directory_entry(path, depth) result(entry)
     character(len=*), intent(in) :: path

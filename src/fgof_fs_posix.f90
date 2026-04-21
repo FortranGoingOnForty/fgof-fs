@@ -12,6 +12,7 @@ module fgof_fs_posix
   integer, parameter :: PATH_BUFFER_LEN = 4096
 
   public :: current_dir
+  public :: copy_file_path
   public :: lstat_mode
   public :: lstat_size
   public :: mkdir_if_needed
@@ -94,6 +95,13 @@ module fgof_fs_posix
       character(kind=c_char), intent(in) :: destination(*)
       integer(c_int) :: fgof_fs_rename_path
     end function fgof_fs_rename_path
+
+    function fgof_fs_copy_file(source, destination) bind(C, name="fgof_fs_copy_file")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: source(*)
+      character(kind=c_char), intent(in) :: destination(*)
+      integer(c_int) :: fgof_fs_copy_file
+    end function fgof_fs_copy_file
   end interface
 
 contains
@@ -218,6 +226,17 @@ contains
     c_destination = to_c_string(destination)
     success = (fgof_fs_rename_path(c_source, c_destination) /= 0_c_int)
   end function rename_path
+
+  logical function copy_file_path(source, destination) result(success)
+    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: destination
+    character(kind=c_char), allocatable :: c_source(:)
+    character(kind=c_char), allocatable :: c_destination(:)
+
+    c_source = to_c_string(source)
+    c_destination = to_c_string(destination)
+    success = (fgof_fs_copy_file(c_source, c_destination) /= 0_c_int)
+  end function copy_file_path
 
   function to_c_string(str) result(buf)
     character(len=*), intent(in) :: str
