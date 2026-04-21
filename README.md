@@ -8,9 +8,9 @@ It is the planned filesystem package in the `FortranGoingOnForty` library family
 
 ## Status
 
-Path-core sprint in progress.
+Path and metadata core in progress.
 
-The repository is set up, the package builds cleanly, and the first path helpers are now implemented and tested. The next steps are metadata, kind checks, and directory traversal.
+The repository is set up, the package builds cleanly, and the first path plus metadata helpers are now implemented and tested. The next major steps are directory traversal and write-side operations.
 
 Current v1 target:
 
@@ -45,27 +45,36 @@ Likely follow-on or separate-package scope:
 fpm test
 ```
 
-## Current Scaffold
+## Current Surface
 
-Today the package includes a small but real path baseline plus an existence check:
+Today the package includes a small but real path and metadata baseline:
 
 - `join_path()` in `fgof_path`
 - `basename()` in `fgof_path`
 - `dirname()` in `fgof_path`
 - `normalize_path()` in `fgof_path`
-- `path_exists()` in `fgof_fs`
+- `exists()` and `path_exists()` in `fgof_fs`
+- `is_file()` in `fgof_fs`
+- `is_directory()` in `fgof_fs`
+- `is_symlink()` in `fgof_fs`
+- `stat()` and `lstat()` in `fgof_fs`
+- `current_dir()` in `fgof_fs`
 
 These functions are intentionally compact. They give the package a usable first slice while the broader filesystem API is still being shaped.
 
 ## Current Example
 
 ```fortran
+use fgof_fs, only : current_dir, exists, stat
 use fgof_path, only : basename, dirname, join_path, normalize_path
 
 print "(A)", join_path("alpha", "beta.txt")
 print "(A)", basename("/tmp/example.txt")
 print "(A)", dirname("/tmp/example.txt")
 print "(A)", normalize_path("./tmp/../example.txt")
+print "(A)", current_dir()
+print *, exists("README.md")
+print *, stat("README.md")%size
 ```
 
 ## Boundaries
