@@ -8,9 +8,9 @@ It is the planned filesystem package in the `FortranGoingOnForty` library family
 
 ## Status
 
-Planning scaffold.
+Path-core sprint in progress.
 
-The repository is set up, the public package shape is being defined, and the first implementation pass will focus on a narrow but useful POSIX-first filesystem surface.
+The repository is set up, the package builds cleanly, and the first path helpers are now implemented and tested. The next steps are metadata, kind checks, and directory traversal.
 
 Current v1 target:
 
@@ -47,12 +47,26 @@ fpm test
 
 ## Current Scaffold
 
-Today the package only includes a tiny path and existence baseline:
+Today the package includes a small but real path baseline plus an existence check:
 
 - `join_path()` in `fgof_path`
+- `basename()` in `fgof_path`
+- `dirname()` in `fgof_path`
+- `normalize_path()` in `fgof_path`
 - `path_exists()` in `fgof_fs`
 
-Those functions are intentionally small. They keep the package buildable while the real API contract and sprint plan are being settled.
+These functions are intentionally compact. They give the package a usable first slice while the broader filesystem API is still being shaped.
+
+## Current Example
+
+```fortran
+use fgof_path, only : basename, dirname, join_path, normalize_path
+
+print "(A)", join_path("alpha", "beta.txt")
+print "(A)", basename("/tmp/example.txt")
+print "(A)", dirname("/tmp/example.txt")
+print "(A)", normalize_path("./tmp/../example.txt")
+```
 
 ## Boundaries
 

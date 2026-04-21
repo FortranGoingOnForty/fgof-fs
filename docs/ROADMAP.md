@@ -2,9 +2,9 @@
 
 ## Current focus
 
-- define a small ergonomic filesystem and path API
+- finish the path-core API with deliberate names and behavior
 - extract the highest-value pieces from local app code without dragging app-specific design into the package
-- keep the first release focused on the operations most app authors need immediately
+- move next into metadata and directory-kind queries
 
 ## v0.1
 
