@@ -240,8 +240,10 @@ contains
   logical function move_path(source, destination) result(success)
     character(len=*), intent(in) :: source
     character(len=*), intent(in) :: destination
+    type(path_info) :: source_info
 
-    if (.not. exists(source)) then
+    source_info = lstat(source)
+    if (.not. source_info%exists) then
       success = .false.
       return
     end if

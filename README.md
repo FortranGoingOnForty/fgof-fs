@@ -123,7 +123,7 @@ Discovery:
 
 Mutation and lookup:
 
-- `move_path()` uses POSIX rename behavior and overwrites plain destination files when the platform allows it
+- `move_path()` uses POSIX rename behavior, overwrites plain destination files when the platform allows it, and can rename dangling symlinks
 - `copy_file()` copies regular file contents and overwrites plain destination files
 - `copy_file()` rejects directory and symlink sources or destinations in the current implementation
 - `copy_file()` does not create parent directories implicitly
