@@ -16,8 +16,8 @@ contains
     character(len=:), allocatable :: lhs
     character(len=:), allocatable :: rhs
 
-    lhs = trim(left)
-    rhs = trim(right)
+    lhs = left
+    rhs = right
 
     if (len(lhs) == 0) then
       path = rhs
@@ -51,7 +51,7 @@ contains
     character(len=:), allocatable :: path
     integer :: pos
 
-    path = strip_trailing_separators(trim(path_in))
+    path = strip_trailing_separators(path_in)
     if (len(path) == 0) then
       name = ""
       return
@@ -76,7 +76,7 @@ contains
     character(len=:), allocatable :: path
     integer :: pos
 
-    path = strip_trailing_separators(trim(path_in))
+    path = strip_trailing_separators(path_in)
     if (len(path) == 0) then
       parent = "."
       return
@@ -101,8 +101,8 @@ contains
     character(len=*), intent(in) :: path_in
     character(len=:), allocatable :: path_out
     character(len=:), allocatable :: path
-    character(len=:), allocatable :: component
-    character(len=:), allocatable :: stack(:)
+    integer, allocatable :: stack_start(:)
+    integer, allocatable :: stack_end(:)
     logical :: is_absolute
     integer :: i
     integer :: start_idx
@@ -110,15 +110,15 @@ contains
     integer :: top
     integer :: total_len
 
-    path = trim(path_in)
+    path = path_in
     if (len(path) == 0) then
       path_out = "."
       return
     end if
 
     is_absolute = (path(1:1) == "/")
-    allocate(character(len=max(1, len(path))) :: stack(max(1, len(path))))
-    stack = ""
+    allocate(stack_start(max(1, len(path))))
+    allocate(stack_end(max(1, len(path))))
     top = 0
 
     i = 1
@@ -133,26 +133,25 @@ contains
         i = i + 1
       end do
       end_idx = i - 1
-      component = path(start_idx:end_idx)
-
-      select case (component)
-      case (".")
+      if (end_idx == start_idx .and. path(start_idx:end_idx) == ".") then
         cycle
-      case ("..")
+      else if (end_idx == start_idx + 1 .and. path(start_idx:end_idx) == "..") then
         if (is_absolute) then
           if (top > 0) top = top - 1
         else
-          if (top > 0 .and. stack(top) /= "..") then
+          if (top > 0 .and. .not. stack_component_is_parent(path, stack_start(top), stack_end(top))) then
             top = top - 1
           else
             top = top + 1
-            stack(top) = component
+            stack_start(top) = start_idx
+            stack_end(top) = end_idx
           end if
         end if
-      case default
+      else
         top = top + 1
-        stack(top) = component
-      end select
+        stack_start(top) = start_idx
+        stack_end(top) = end_idx
+      end if
     end do
 
     if (top == 0) then
@@ -166,19 +165,19 @@ contains
 
     total_len = top - 1
     do i = 1, top
-      total_len = total_len + len_trim(stack(i))
+      total_len = total_len + stack_end(i) - stack_start(i) + 1
     end do
     if (is_absolute) total_len = total_len + 1
 
     allocate(character(len=total_len) :: path_out)
     if (is_absolute) then
-      path_out = "/" // trim(stack(1))
+      path_out = "/" // path(stack_start(1):stack_end(1))
     else
-      path_out = trim(stack(1))
+      path_out = path(stack_start(1):stack_end(1))
     end if
 
     do i = 2, top
-      path_out = path_out // "/" // trim(stack(i))
+      path_out = path_out // "/" // path(stack_start(i):stack_end(i))
     end do
   end function normalize_path
 
@@ -187,7 +186,7 @@ contains
     character(len=:), allocatable :: path
     integer :: last
 
-    path = trim(path_in)
+    path = path_in
     if (len(path) == 0) then
       return
     end if
@@ -203,5 +202,13 @@ contains
       path = path(:last)
     end if
   end function strip_trailing_separators
+
+  logical function stack_component_is_parent(path, start_idx, end_idx) result(is_parent)
+    character(len=*), intent(in) :: path
+    integer, intent(in) :: start_idx
+    integer, intent(in) :: end_idx
+
+    is_parent = (end_idx == start_idx + 1 .and. path(start_idx:end_idx) == "..")
+  end function stack_component_is_parent
 
 end module fgof_path

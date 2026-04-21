@@ -11,6 +11,10 @@ module fgof_fs_posix
   integer, parameter :: ENTRY_NAME_LEN = 256
   integer, parameter :: PATH_BUFFER_LEN = 4096
 
+  type, public :: fs_name
+    character(len=:), allocatable :: text
+  end type fs_name
+
   public :: current_dir
   public :: copy_file_path
   public :: is_executable_path
@@ -162,21 +166,20 @@ contains
 
   function scandir_names(path) result(names)
     character(len=*), intent(in) :: path
-    character(len=:), allocatable :: names(:)
+    type(fs_name), allocatable :: names(:)
     character(kind=c_char), allocatable :: c_path(:)
     character(kind=c_char), allocatable :: c_names(:)
     integer(c_int) :: c_count
     integer(c_int) :: c_filled
     integer :: count
     integer :: i
-    integer :: max_len
 
     c_path = to_c_string(path)
     c_count = fgof_fs_scandir_count(c_path)
     count = int(c_count)
 
     if (count <= 0) then
-      allocate(character(len=1) :: names(0))
+      allocate(names(0))
       return
     end if
 
@@ -186,14 +189,13 @@ contains
     c_filled = fgof_fs_scandir_fill(c_path, c_names, int(count, c_int), int(ENTRY_NAME_LEN, c_int))
     count = int(c_filled)
     if (count <= 0) then
-      allocate(character(len=1) :: names(0))
+      allocate(names(0))
       return
     end if
 
-    max_len = max_name_length(c_names, count)
-    allocate(character(len=max_len) :: names(count))
+    allocate(names(count))
     do i = 1, count
-      names(i) = name_from_slot(c_names, i)
+      names(i)%text = name_from_slot(c_names, i)
     end do
 
     call sort_names(names)
@@ -259,7 +261,7 @@ contains
     integer :: i
     integer :: n
 
-    n = len_trim(str)
+    n = len(str)
     allocate(buf(n + 1))
     do i = 1, n
       buf(i) = str(i:i)
@@ -312,14 +314,14 @@ contains
   end function name_from_slot
 
   subroutine sort_names(names)
-    character(len=*), intent(inout) :: names(:)
-    character(len=len(names)) :: temp
+    type(fs_name), intent(inout) :: names(:)
+    type(fs_name) :: temp
     integer :: i
     integer :: j
 
     do i = 1, size(names) - 1
       do j = i + 1, size(names)
-        if (trim(names(j)) < trim(names(i))) then
+        if (name_less(names(j)%text, names(i)%text)) then
           temp = names(i)
           names(i) = names(j)
           names(j) = temp
@@ -327,5 +329,26 @@ contains
       end do
     end do
   end subroutine sort_names
+
+  logical function name_less(left, right) result(is_less)
+    character(len=*), intent(in) :: left
+    character(len=*), intent(in) :: right
+    integer :: i
+    integer :: limit
+
+    limit = min(len(left), len(right))
+    do i = 1, limit
+      if (left(i:i) < right(i:i)) then
+        is_less = .true.
+        return
+      end if
+      if (left(i:i) > right(i:i)) then
+        is_less = .false.
+        return
+      end if
+    end do
+
+    is_less = (len(left) < len(right))
+  end function name_less
 
 end module fgof_fs_posix

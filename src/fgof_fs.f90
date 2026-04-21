@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, copy_file_path, current_dir, is_executable_path, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, copy_file_path, current_dir, fs_name, is_executable_path, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -106,7 +106,7 @@ contains
   function scandir(path) result(entries)
     character(len=*), intent(in) :: path
     type(directory_entry), allocatable :: entries(:)
-    character(len=:), allocatable :: names(:)
+    type(fs_name), allocatable :: names(:)
     integer :: i
 
     if (.not. is_directory(path)) then
@@ -117,7 +117,7 @@ contains
     names = scandir_names(path)
     allocate(entries(size(names)))
     do i = 1, size(names)
-      entries(i) = make_directory_entry(join_path(path, trim(names(i))), 1)
+      entries(i) = make_directory_entry(join_path(path, names(i)%text), 1)
     end do
   end function scandir
 
@@ -289,7 +289,7 @@ contains
     integer :: start_idx
     integer :: end_idx
 
-    command = trim(name)
+    command = name
     if (len(command) == 0) then
       path = ""
       return
@@ -325,11 +325,11 @@ contains
       else
         end_idx = index(search_path(start_idx:), ":")
         if (end_idx == 0) then
-          directory = trim(search_path(start_idx:))
+          directory = search_path(start_idx:)
         else if (end_idx == 1) then
           directory = ""
         else
-          directory = trim(search_path(start_idx:start_idx + end_idx - 2))
+          directory = search_path(start_idx:start_idx + end_idx - 2)
         end if
       end if
 
