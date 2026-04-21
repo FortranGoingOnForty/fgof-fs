@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
+#include <errno.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -88,4 +89,22 @@ int fgof_fs_scandir_fill(const char *pathname, char *names, int max_entries, int
 
     closedir(dir);
     return count;
+}
+
+int fgof_fs_mkdir_if_needed(const char *pathname, int mode) {
+    struct stat st;
+
+    if (stat(pathname, &st) == 0) {
+        return S_ISDIR(st.st_mode) ? 1 : 0;
+    }
+
+    if (mkdir(pathname, (mode_t)mode) == 0) {
+        return 1;
+    }
+
+    if (errno == EEXIST && stat(pathname, &st) == 0 && S_ISDIR(st.st_mode)) {
+        return 1;
+    }
+
+    return 0;
 }

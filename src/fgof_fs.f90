@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, scandir_names, stat_mode, stat_size
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, mkdir_if_needed, scandir_names, stat_mode, stat_size
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -15,6 +15,7 @@ module fgof_fs
   public :: path_info
   public :: current_dir
   public :: lstat
+  public :: mkdir_p
   public :: scandir
   public :: stat
   public :: walk
@@ -128,6 +129,55 @@ contains
     next_index = 1
     call collect_walk_entries(path, 0, entries, next_index)
   end function walk
+
+  logical function mkdir_p(path) result(success)
+    character(len=*), intent(in) :: path
+    character(len=:), allocatable :: normalized
+    character(len=:), allocatable :: partial
+    character(len=:), allocatable :: component
+    logical :: is_absolute
+    integer :: i
+    integer :: start_idx
+    integer :: end_idx
+
+    normalized = normalize_path(path)
+    if (normalized == ".") then
+      success = is_directory(".")
+      return
+    end if
+
+    if (normalized == "/") then
+      success = is_directory("/")
+      return
+    end if
+
+    is_absolute = (normalized(1:1) == "/")
+    if (is_absolute) then
+      partial = "/"
+      i = 2
+    else
+      partial = ""
+      i = 1
+    end if
+
+    success = .true.
+    do while (i <= len(normalized))
+      start_idx = i
+      do while (i <= len(normalized) .and. normalized(i:i) /= "/")
+        i = i + 1
+      end do
+      end_idx = i - 1
+      component = normalized(start_idx:end_idx)
+      partial = join_path(partial, component)
+
+      if (.not. mkdir_if_needed(partial)) then
+        success = .false.
+        return
+      end if
+
+      i = i + 1
+    end do
+  end function mkdir_p
 
   function make_directory_entry(path, depth) result(entry)
     character(len=*), intent(in) :: path

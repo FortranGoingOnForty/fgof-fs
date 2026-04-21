@@ -14,6 +14,7 @@ module fgof_fs_posix
   public :: current_dir
   public :: lstat_mode
   public :: lstat_size
+  public :: mkdir_if_needed
   public :: scandir_names
   public :: stat_mode
   public :: stat_size
@@ -64,6 +65,13 @@ module fgof_fs_posix
       integer(c_int), value :: stride
       integer(c_int) :: fgof_fs_scandir_fill
     end function fgof_fs_scandir_fill
+
+    function fgof_fs_mkdir_if_needed(pathname, mode) bind(C, name="fgof_fs_mkdir_if_needed")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: pathname(*)
+      integer(c_int), value :: mode
+      integer(c_int) :: fgof_fs_mkdir_if_needed
+    end function fgof_fs_mkdir_if_needed
   end interface
 
 contains
@@ -153,6 +161,14 @@ contains
 
     call sort_names(names)
   end function scandir_names
+
+  logical function mkdir_if_needed(path) result(success)
+    character(len=*), intent(in) :: path
+    character(kind=c_char), allocatable :: c_path(:)
+
+    c_path = to_c_string(path)
+    success = (fgof_fs_mkdir_if_needed(c_path, int(o'755', c_int)) /= 0_c_int)
+  end function mkdir_if_needed
 
   function to_c_string(str) result(buf)
     character(len=*), intent(in) :: str
