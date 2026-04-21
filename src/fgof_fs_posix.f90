@@ -15,6 +15,7 @@ module fgof_fs_posix
   public :: lstat_mode
   public :: lstat_size
   public :: mkdir_if_needed
+  public :: rename_path
   public :: rmdir_path
   public :: unlink_path
   public :: scandir_names
@@ -86,6 +87,13 @@ module fgof_fs_posix
       character(kind=c_char), intent(in) :: pathname(*)
       integer(c_int) :: fgof_fs_rmdir_path
     end function fgof_fs_rmdir_path
+
+    function fgof_fs_rename_path(source, destination) bind(C, name="fgof_fs_rename_path")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: source(*)
+      character(kind=c_char), intent(in) :: destination(*)
+      integer(c_int) :: fgof_fs_rename_path
+    end function fgof_fs_rename_path
   end interface
 
 contains
@@ -199,6 +207,17 @@ contains
     c_path = to_c_string(path)
     success = (fgof_fs_rmdir_path(c_path) /= 0_c_int)
   end function rmdir_path
+
+  logical function rename_path(source, destination) result(success)
+    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: destination
+    character(kind=c_char), allocatable :: c_source(:)
+    character(kind=c_char), allocatable :: c_destination(:)
+
+    c_source = to_c_string(source)
+    c_destination = to_c_string(destination)
+    success = (fgof_fs_rename_path(c_source, c_destination) /= 0_c_int)
+  end function rename_path
 
   function to_c_string(str) result(buf)
     character(len=*), intent(in) :: str

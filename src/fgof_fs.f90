@@ -1,5 +1,5 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, mkdir_if_needed, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -13,6 +13,7 @@ module fgof_fs
   public :: is_symlink
   public :: remove_file
   public :: remove_tree
+  public :: move_path
   public :: path_exists
   public :: path_info
   public :: current_dir
@@ -233,6 +234,18 @@ contains
 
     success = rmdir_path(path)
   end function remove_tree
+
+  logical function move_path(source, destination) result(success)
+    character(len=*), intent(in) :: source
+    character(len=*), intent(in) :: destination
+
+    if (.not. exists(source)) then
+      success = .false.
+      return
+    end if
+
+    success = rename_path(source, destination)
+  end function move_path
 
   function make_directory_entry(path, depth) result(entry)
     character(len=*), intent(in) :: path

@@ -1,6 +1,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -115,4 +116,8 @@ int fgof_fs_unlink_path(const char *pathname) {
 
 int fgof_fs_rmdir_path(const char *pathname) {
     return rmdir(pathname) == 0 ? 1 : 0;
+}
+
+int fgof_fs_rename_path(const char *source, const char *destination) {
+    return rename(source, destination) == 0 ? 1 : 0;
 }
