@@ -1,25 +1,27 @@
 # fgof-fs
 
+[![CI](https://github.com/FortranGoingOnForty/fgof-fs/actions/workflows/ci.yml/badge.svg)](https://github.com/FortranGoingOnForty/fgof-fs/actions/workflows/ci.yml)
+
 Filesystem and path helpers for modern Fortran tools.
 
 `fgof-fs` is intended to be a small, standalone library that gives Fortran applications an ergonomic filesystem toolkit for paths, metadata, traversal, and common file operations.
 
-It is the planned filesystem package in the `FortranGoingOnForty` library family, but it is intended to stand on its own as a normal `fpm` package.
+It is the planned filesystem package in the [FortranGoingOnForty lib-modules](https://github.com/FortranGoingOnForty/lib-modules) catalog, but it is intended to stand on its own as a normal `fpm` package.
 
 ## Status
 
 Path, metadata, discovery, and first write-side helpers are in place.
 
-The repository is set up, the package builds cleanly, and the first path, metadata, traversal, mutation, and command-discovery helpers are implemented and tested. The next major steps are hardening examples, tightening edge-case semantics, and reviewing the first tagged release surface.
+The repository already has a usable v1 slice for tool authors. The current work is mostly hardening, API polish, and release-shape refinement rather than basic capability.
 
-Current v1 target:
+Implemented today:
 
-- path joins and normalization helpers
-- existence and kind checks
-- `stat` and `lstat` style metadata
-- directory listing and recursive walking
-- file and directory mutations such as create, remove, copy, and move
-- practical helpers such as `current_dir` and `which`
+- public `fgof_path` and `fgof_fs` modules
+- path helpers: `join_path()`, `basename()`, `dirname()`, `normalize_path()`
+- filesystem metadata: `exists()`, `path_exists()`, `is_file()`, `is_directory()`, `is_symlink()`, `stat()`, `lstat()`
+- discovery helpers: `current_dir()`, `scandir()`, `walk()`
+- mutation helpers: `mkdir_p()`, `remove_file()`, `remove_tree()`, `move_path()`, `copy_file()`
+- command discovery: `which()`
 
 Likely follow-on or separate-package scope:
 
@@ -28,16 +30,50 @@ Likely follow-on or separate-package scope:
 - XDG and app-state directory helpers
 - ignore rules and advanced globbing
 
-## Why This Package
+## Why Use It
 
-- there is still no obvious default ergonomic filesystem toolkit for Fortran app authors
-- shells, editors, file tools, and developer tooling all need this repeatedly
-- the local FortranGoingOnForty codebase already contains strong extraction candidates in `fortress`, `sniffert`, and `fortsh`
+- it gives Fortran app authors an obvious default for common filesystem tasks
+- metadata, traversal, mutation, and command lookup live behind one small API
+- discovery behavior is deterministic: `scandir()` is sorted lexically and `walk()` is stable depth-first
+- symlink behavior is explicit instead of surprising
+- the package is aimed at shells, editors, file tools, test fixtures, and developer tooling rather than numerics
 
-## Planned Public Modules
+## Public API Shape
+
+Modules:
 
 - `fgof_path`
 - `fgof_fs`
+
+Types:
+
+- `directory_entry`
+- `path_info`
+
+## Quick Start
+
+```fortran
+program demo_fs
+  use fgof_fs, only : copy_file, current_dir, directory_entry, scandir, stat, which
+  use fgof_path, only : join_path, normalize_path
+  implicit none
+
+  type(directory_entry), allocatable :: entries(:)
+
+  print "(A)", join_path("alpha", "beta.txt")
+  print "(A)", normalize_path("./tmp/../example.txt")
+  print "(A)", current_dir()
+  print *, stat("README.md")%size
+  print "(A)", which("sh")
+
+  if (copy_file("README.md", "/tmp/fgof-fs-readme-copy.txt")) then
+    print *, "copied"
+  end if
+
+  entries = scandir("src")
+  print *, size(entries)
+end program demo_fs
+```
 
 ## Build And Test
 
@@ -45,72 +81,66 @@ Likely follow-on or separate-package scope:
 fpm test
 ```
 
-## Current Surface
+That is the baseline verification command locally and in CI.
 
-Today the package includes a small but real path, metadata, and discovery baseline:
+## Common Patterns
 
-- `join_path()` in `fgof_path`
-- `basename()` in `fgof_path`
-- `dirname()` in `fgof_path`
-- `normalize_path()` in `fgof_path`
-- `type(directory_entry)` in `fgof_fs`
-- `type(path_info)` in `fgof_fs`
-- `exists()` and `path_exists()` in `fgof_fs`
-- `is_file()` in `fgof_fs`
-- `is_directory()` in `fgof_fs`
-- `is_symlink()` in `fgof_fs`
-- `stat()` and `lstat()` in `fgof_fs`
-- `current_dir()` in `fgof_fs`
-- `scandir()` in `fgof_fs`
-- `walk()` in `fgof_fs`
-- `mkdir_p()` in `fgof_fs`
-- `remove_file()` in `fgof_fs`
-- `remove_tree()` in `fgof_fs`
-- `move_path()` in `fgof_fs`
-- `copy_file()` in `fgof_fs`
-- `which()` in `fgof_fs`
-
-These functions are intentionally compact. They already give the package a usable slice for tooling work while the broader filesystem API is still being shaped.
-
-## Current Example
+Walk a tree:
 
 ```fortran
-use fgof_fs, only : copy_file, current_dir, directory_entry, exists, scandir, stat, which
-use fgof_path, only : basename, dirname, join_path, normalize_path
-
 type(directory_entry), allocatable :: entries(:)
-
-print "(A)", join_path("alpha", "beta.txt")
-print "(A)", basename("/tmp/example.txt")
-print "(A)", dirname("/tmp/example.txt")
-print "(A)", normalize_path("./tmp/../example.txt")
-print "(A)", current_dir()
-print *, exists("README.md")
-print *, stat("README.md")%size
-print "(A)", which("sh")
-print *, copy_file("README.md", "/tmp/fgof-fs-readme-copy.txt")
-entries = scandir("src")
-print *, size(entries)
+entries = walk("src")
 ```
 
-Discovery semantics in the current implementation:
+Create parent directories:
+
+```fortran
+if (.not. mkdir_p("build/cache/state")) error stop "mkdir_p failed"
+```
+
+Move or copy regular files:
+
+```fortran
+if (.not. move_path("draft.txt", "final.txt")) error stop "move failed"
+if (.not. copy_file("final.txt", "backup.txt")) error stop "copy failed"
+```
+
+Resolve a tool from `PATH`:
+
+```fortran
+character(len=:), allocatable :: sh_path
+sh_path = which("sh")
+```
+
+## Current Semantics
+
+Discovery:
 
 - `scandir()` returns direct children only
+- `scandir()` returns entries in lexical order
 - `walk()` returns a flat depth-first listing with the root entry first
-- `walk()` does not recurse into symlinks in the first pass
+- `walk()` does not recurse into symlink roots or symlink children in the current implementation
 
-Mutation and lookup semantics in the current implementation:
+Mutation and lookup:
 
-- `move_path()` renames files or directories in one step
+- `move_path()` uses POSIX rename behavior and overwrites plain destination files when the platform allows it
 - `copy_file()` copies regular file contents and overwrites plain destination files
-- `copy_file()` rejects directory and symlink sources or destinations in the first pass
+- `copy_file()` rejects directory and symlink sources or destinations in the current implementation
+- `copy_file()` does not create parent directories implicitly
+- `remove_tree()` removes symlink entries inside a tree without removing the symlink targets they point to
 - `which()` resolves direct executable paths and searches `PATH` for bare command names
+
+## Supported Platforms
+
+- macOS
+- Linux
+- GitHub Actions CI runs `fpm test` on `macos-latest` and `ubuntu-latest` with the GCC Fortran toolchain and `fpm v0.13.0`
 
 ## Boundaries
 
 - POSIX-first for macOS and Linux
-- complement `stdlib_system` rather than trying to fight it
-- keep the first release tight and broadly useful
+- complements `stdlib_system` rather than trying to replace or fight it
+- keeps the first release tight and broadly useful
 
 ## License
 
