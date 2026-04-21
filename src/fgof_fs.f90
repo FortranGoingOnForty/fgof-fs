@@ -1,11 +1,13 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, stat_mode, stat_size
-  use fgof_fs_types, only : path_info
+  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, current_dir, lstat_mode, lstat_size, scandir_names, stat_mode, stat_size
+  use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
+  use fgof_path, only : basename, join_path, normalize_path
   implicit none
   private
 
   public :: exists
+  public :: directory_entry
   public :: is_directory
   public :: is_file
   public :: is_symlink
@@ -13,6 +15,7 @@ module fgof_fs
   public :: path_info
   public :: current_dir
   public :: lstat
+  public :: scandir
   public :: stat
 
 contains
@@ -92,5 +95,34 @@ contains
       size=size_bytes &
     )
   end function lstat
+
+  function scandir(path) result(entries)
+    character(len=*), intent(in) :: path
+    type(directory_entry), allocatable :: entries(:)
+    character(len=:), allocatable :: names(:)
+    integer :: i
+
+    if (.not. is_directory(path)) then
+      allocate(entries(0))
+      return
+    end if
+
+    names = scandir_names(path)
+    allocate(entries(size(names)))
+    do i = 1, size(names)
+      entries(i) = make_directory_entry(join_path(path, trim(names(i))), 1)
+    end do
+  end function scandir
+
+  function make_directory_entry(path, depth) result(entry)
+    character(len=*), intent(in) :: path
+    integer, intent(in) :: depth
+    type(directory_entry) :: entry
+
+    entry%path = normalize_path(path)
+    entry%name = basename(entry%path)
+    entry%depth = depth
+    entry%info = lstat(entry%path)
+  end function make_directory_entry
 
 end module fgof_fs

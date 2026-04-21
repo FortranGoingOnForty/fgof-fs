@@ -8,11 +8,13 @@ module fgof_fs_posix
   integer(c_int), parameter, public :: S_IFREG = int(o'100000', c_int)
   integer(c_int), parameter, public :: S_IFDIR = int(o'040000', c_int)
   integer(c_int), parameter, public :: S_IFLNK = int(o'120000', c_int)
+  integer, parameter :: ENTRY_NAME_LEN = 256
   integer, parameter :: PATH_BUFFER_LEN = 4096
 
   public :: current_dir
   public :: lstat_mode
   public :: lstat_size
+  public :: scandir_names
   public :: stat_mode
   public :: stat_size
 
@@ -47,6 +49,21 @@ module fgof_fs_posix
       integer(c_int), value :: path_len
       integer(c_int) :: fgof_fs_getcwd
     end function fgof_fs_getcwd
+
+    function fgof_fs_scandir_count(pathname) bind(C, name="fgof_fs_scandir_count")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: pathname(*)
+      integer(c_int) :: fgof_fs_scandir_count
+    end function fgof_fs_scandir_count
+
+    function fgof_fs_scandir_fill(pathname, names, max_entries, stride) bind(C, name="fgof_fs_scandir_fill")
+      import :: c_char, c_int
+      character(kind=c_char), intent(in) :: pathname(*)
+      character(kind=c_char), intent(out) :: names(*)
+      integer(c_int), value :: max_entries
+      integer(c_int), value :: stride
+      integer(c_int) :: fgof_fs_scandir_fill
+    end function fgof_fs_scandir_fill
   end interface
 
 contains
@@ -98,6 +115,45 @@ contains
     path = from_c_string(c_path)
   end function current_dir
 
+  function scandir_names(path) result(names)
+    character(len=*), intent(in) :: path
+    character(len=:), allocatable :: names(:)
+    character(kind=c_char), allocatable :: c_path(:)
+    character(kind=c_char), allocatable :: c_names(:)
+    integer(c_int) :: c_count
+    integer(c_int) :: c_filled
+    integer :: count
+    integer :: i
+    integer :: max_len
+
+    c_path = to_c_string(path)
+    c_count = fgof_fs_scandir_count(c_path)
+    count = int(c_count)
+
+    if (count <= 0) then
+      allocate(character(len=1) :: names(0))
+      return
+    end if
+
+    allocate(c_names(count * ENTRY_NAME_LEN))
+    c_names = c_null_char
+
+    c_filled = fgof_fs_scandir_fill(c_path, c_names, int(count, c_int), int(ENTRY_NAME_LEN, c_int))
+    count = int(c_filled)
+    if (count <= 0) then
+      allocate(character(len=1) :: names(0))
+      return
+    end if
+
+    max_len = max_name_length(c_names, count)
+    allocate(character(len=max_len) :: names(count))
+    do i = 1, count
+      names(i) = name_from_slot(c_names, i)
+    end do
+
+    call sort_names(names)
+  end function scandir_names
+
   function to_c_string(str) result(buf)
     character(len=*), intent(in) :: str
     character(kind=c_char), allocatable :: buf(:)
@@ -134,5 +190,43 @@ contains
       text(i:i) = char(iachar(buf(i)))
     end do
   end function from_c_string
+
+  integer function max_name_length(buf, count) result(max_len)
+    character(kind=c_char), intent(in) :: buf(:)
+    integer, intent(in) :: count
+    integer :: i
+
+    max_len = 1
+    do i = 1, count
+      max_len = max(max_len, len(name_from_slot(buf, i)))
+    end do
+  end function max_name_length
+
+  function name_from_slot(buf, index) result(name)
+    character(kind=c_char), intent(in) :: buf(:)
+    integer, intent(in) :: index
+    character(len=:), allocatable :: name
+    integer :: offset
+
+    offset = (index - 1) * ENTRY_NAME_LEN
+    name = from_c_string(buf(offset + 1:offset + ENTRY_NAME_LEN))
+  end function name_from_slot
+
+  subroutine sort_names(names)
+    character(len=*), intent(inout) :: names(:)
+    character(len=len(names)) :: temp
+    integer :: i
+    integer :: j
+
+    do i = 1, size(names) - 1
+      do j = i + 1, size(names)
+        if (trim(names(j)) < trim(names(i))) then
+          temp = names(i)
+          names(i) = names(j)
+          names(j) = temp
+        end if
+      end do
+    end do
+  end subroutine sort_names
 
 end module fgof_fs_posix
