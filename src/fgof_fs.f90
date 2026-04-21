@@ -17,6 +17,7 @@ module fgof_fs
   public :: lstat
   public :: scandir
   public :: stat
+  public :: walk
 
 contains
 
@@ -114,6 +115,20 @@ contains
     end do
   end function scandir
 
+  function walk(path) result(entries)
+    character(len=*), intent(in) :: path
+    type(directory_entry), allocatable :: entries(:)
+    integer :: total
+    integer :: next_index
+
+    total = count_walk_entries(path)
+    allocate(entries(total))
+    if (total == 0) return
+
+    next_index = 1
+    call collect_walk_entries(path, 0, entries, next_index)
+  end function walk
+
   function make_directory_entry(path, depth) result(entry)
     character(len=*), intent(in) :: path
     integer, intent(in) :: depth
@@ -124,5 +139,47 @@ contains
     entry%depth = depth
     entry%info = lstat(entry%path)
   end function make_directory_entry
+
+  recursive integer function count_walk_entries(path) result(total)
+    character(len=*), intent(in) :: path
+    type(directory_entry), allocatable :: children(:)
+    type(path_info) :: info
+    integer :: i
+
+    info = lstat(path)
+    if (.not. info%exists) then
+      total = 0
+      return
+    end if
+
+    total = 1
+    if (.not. info%is_directory .or. info%is_symlink) return
+
+    children = scandir(path)
+    do i = 1, size(children)
+      total = total + count_walk_entries(children(i)%path)
+    end do
+  end function count_walk_entries
+
+  recursive subroutine collect_walk_entries(path, depth, entries, next_index)
+    character(len=*), intent(in) :: path
+    integer, intent(in) :: depth
+    type(directory_entry), intent(inout) :: entries(:)
+    integer, intent(inout) :: next_index
+    type(directory_entry), allocatable :: children(:)
+    type(directory_entry) :: entry
+    integer :: i
+
+    entry = make_directory_entry(path, depth)
+    entries(next_index) = entry
+    next_index = next_index + 1
+
+    if (.not. entry%info%is_directory .or. entry%info%is_symlink) return
+
+    children = scandir(path)
+    do i = 1, size(children)
+      call collect_walk_entries(children(i)%path, depth + 1, entries, next_index)
+    end do
+  end subroutine collect_walk_entries
 
 end module fgof_fs
