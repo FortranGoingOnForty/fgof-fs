@@ -8,9 +8,9 @@ It is the planned filesystem package in the `FortranGoingOnForty` library family
 
 ## Status
 
-Path, metadata, and discovery core in progress.
+Path, metadata, discovery, and first write-side helpers are in place.
 
-The repository is set up, the package builds cleanly, and the first path, metadata, and discovery helpers are now implemented and tested. The next major steps are write-side operations and broader traversal ergonomics.
+The repository is set up, the package builds cleanly, and the first path, metadata, traversal, mutation, and command-discovery helpers are implemented and tested. The next major steps are hardening examples, tightening edge-case semantics, and reviewing the first tagged release surface.
 
 Current v1 target:
 
@@ -63,13 +63,19 @@ Today the package includes a small but real path, metadata, and discovery baseli
 - `current_dir()` in `fgof_fs`
 - `scandir()` in `fgof_fs`
 - `walk()` in `fgof_fs`
+- `mkdir_p()` in `fgof_fs`
+- `remove_file()` in `fgof_fs`
+- `remove_tree()` in `fgof_fs`
+- `move_path()` in `fgof_fs`
+- `copy_file()` in `fgof_fs`
+- `which()` in `fgof_fs`
 
-These functions are intentionally compact. They give the package a usable first slice while the broader filesystem API is still being shaped.
+These functions are intentionally compact. They already give the package a usable slice for tooling work while the broader filesystem API is still being shaped.
 
 ## Current Example
 
 ```fortran
-use fgof_fs, only : current_dir, directory_entry, exists, scandir, stat
+use fgof_fs, only : copy_file, current_dir, directory_entry, exists, scandir, stat, which
 use fgof_path, only : basename, dirname, join_path, normalize_path
 
 type(directory_entry), allocatable :: entries(:)
@@ -81,6 +87,8 @@ print "(A)", normalize_path("./tmp/../example.txt")
 print "(A)", current_dir()
 print *, exists("README.md")
 print *, stat("README.md")%size
+print "(A)", which("sh")
+print *, copy_file("README.md", "/tmp/fgof-fs-readme-copy.txt")
 entries = scandir("src")
 print *, size(entries)
 ```
@@ -90,6 +98,13 @@ Discovery semantics in the current implementation:
 - `scandir()` returns direct children only
 - `walk()` returns a flat depth-first listing with the root entry first
 - `walk()` does not recurse into symlinks in the first pass
+
+Mutation and lookup semantics in the current implementation:
+
+- `move_path()` renames files or directories in one step
+- `copy_file()` copies regular file contents and overwrites plain destination files
+- `copy_file()` rejects directory and symlink sources or destinations in the first pass
+- `which()` resolves direct executable paths and searches `PATH` for bare command names
 
 ## Boundaries
 
