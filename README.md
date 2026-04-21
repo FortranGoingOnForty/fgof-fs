@@ -8,9 +8,9 @@ It is the planned filesystem package in the `FortranGoingOnForty` library family
 
 ## Status
 
-Path and metadata core in progress.
+Path, metadata, and discovery core in progress.
 
-The repository is set up, the package builds cleanly, and the first path plus metadata helpers are now implemented and tested. The next major steps are directory traversal and write-side operations.
+The repository is set up, the package builds cleanly, and the first path, metadata, and discovery helpers are now implemented and tested. The next major steps are write-side operations and broader traversal ergonomics.
 
 Current v1 target:
 
@@ -47,26 +47,32 @@ fpm test
 
 ## Current Surface
 
-Today the package includes a small but real path and metadata baseline:
+Today the package includes a small but real path, metadata, and discovery baseline:
 
 - `join_path()` in `fgof_path`
 - `basename()` in `fgof_path`
 - `dirname()` in `fgof_path`
 - `normalize_path()` in `fgof_path`
+- `type(directory_entry)` in `fgof_fs`
+- `type(path_info)` in `fgof_fs`
 - `exists()` and `path_exists()` in `fgof_fs`
 - `is_file()` in `fgof_fs`
 - `is_directory()` in `fgof_fs`
 - `is_symlink()` in `fgof_fs`
 - `stat()` and `lstat()` in `fgof_fs`
 - `current_dir()` in `fgof_fs`
+- `scandir()` in `fgof_fs`
+- `walk()` in `fgof_fs`
 
 These functions are intentionally compact. They give the package a usable first slice while the broader filesystem API is still being shaped.
 
 ## Current Example
 
 ```fortran
-use fgof_fs, only : current_dir, exists, stat
+use fgof_fs, only : current_dir, directory_entry, exists, scandir, stat
 use fgof_path, only : basename, dirname, join_path, normalize_path
+
+type(directory_entry), allocatable :: entries(:)
 
 print "(A)", join_path("alpha", "beta.txt")
 print "(A)", basename("/tmp/example.txt")
@@ -75,7 +81,15 @@ print "(A)", normalize_path("./tmp/../example.txt")
 print "(A)", current_dir()
 print *, exists("README.md")
 print *, stat("README.md")%size
+entries = scandir("src")
+print *, size(entries)
 ```
+
+Discovery semantics in the current implementation:
+
+- `scandir()` returns direct children only
+- `walk()` returns a flat depth-first listing with the root entry first
+- `walk()` does not recurse into symlinks in the first pass
 
 ## Boundaries
 
