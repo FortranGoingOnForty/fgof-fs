@@ -121,6 +121,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     mode = int(fgof_fs_stat_mode(c_path))
   end function stat_mode
@@ -129,6 +130,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     mode = int(fgof_fs_lstat_mode(c_path))
   end function lstat_mode
@@ -137,6 +139,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     size_bytes = fgof_fs_stat_size(c_path)
   end function stat_size
@@ -145,6 +148,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     size_bytes = fgof_fs_lstat_size(c_path)
   end function lstat_size
@@ -174,6 +178,7 @@ contains
     integer :: count
     integer :: i
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     c_count = fgof_fs_scandir_count(c_path)
     count = int(c_count)
@@ -205,6 +210,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     success = (fgof_fs_mkdir_if_needed(c_path, int(o'755', c_int)) /= 0_c_int)
   end function mkdir_if_needed
@@ -213,6 +219,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     success = (fgof_fs_unlink_path(c_path) /= 0_c_int)
   end function unlink_path
@@ -221,6 +228,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     success = (fgof_fs_rmdir_path(c_path) /= 0_c_int)
   end function rmdir_path
@@ -231,6 +239,8 @@ contains
     character(kind=c_char), allocatable :: c_source(:)
     character(kind=c_char), allocatable :: c_destination(:)
 
+    allocate(c_source(0))
+    allocate(c_destination(0))
     c_source = to_c_string(source)
     c_destination = to_c_string(destination)
     success = (fgof_fs_rename_path(c_source, c_destination) /= 0_c_int)
@@ -242,6 +252,8 @@ contains
     character(kind=c_char), allocatable :: c_source(:)
     character(kind=c_char), allocatable :: c_destination(:)
 
+    allocate(c_source(0))
+    allocate(c_destination(0))
     c_source = to_c_string(source)
     c_destination = to_c_string(destination)
     success = (fgof_fs_copy_file(c_source, c_destination) /= 0_c_int)
@@ -251,6 +263,7 @@ contains
     character(len=*), intent(in) :: path
     character(kind=c_char), allocatable :: c_path(:)
 
+    allocate(c_path(0))
     c_path = to_c_string(path)
     success = (fgof_fs_is_executable_path(c_path) /= 0_c_int)
   end function is_executable_path
@@ -291,17 +304,6 @@ contains
       text(i:i) = char(iachar(buf(i)))
     end do
   end function from_c_string
-
-  integer function max_name_length(buf, count) result(max_len)
-    character(kind=c_char), intent(in) :: buf(:)
-    integer, intent(in) :: count
-    integer :: i
-
-    max_len = 1
-    do i = 1, count
-      max_len = max(max_len, len(name_from_slot(buf, i)))
-    end do
-  end function max_name_length
 
   function name_from_slot(buf, index) result(name)
     character(kind=c_char), intent(in) :: buf(:)

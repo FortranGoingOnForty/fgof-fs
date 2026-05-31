@@ -1,5 +1,22 @@
 module fgof_fs
-  use fgof_fs_posix, only : S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, copy_file_path, current_dir, fs_name, is_executable_path, lstat_mode, lstat_size, mkdir_if_needed, rename_path, rmdir_path, scandir_names, stat_mode, stat_size, unlink_path
+  use fgof_fs_posix, only : &
+    S_IFDIR, &
+    S_IFLNK, &
+    S_IFMT, &
+    S_IFREG, &
+    copy_file_path, &
+    current_dir, &
+    fs_name, &
+    is_executable_path, &
+    lstat_mode, &
+    lstat_size, &
+    mkdir_if_needed, &
+    rename_path, &
+    rmdir_path, &
+    scandir_names, &
+    stat_mode, &
+    stat_size, &
+    unlink_path
   use fgof_fs_types, only : directory_entry, path_info
   use iso_fortran_env, only : int64
   use fgof_path, only : basename, join_path, normalize_path
@@ -109,6 +126,7 @@ contains
     type(fs_name), allocatable :: names(:)
     integer :: i
 
+    allocate(names(0))
     if (.not. is_directory(path)) then
       allocate(entries(0))
       return
@@ -208,6 +226,7 @@ contains
     type(directory_entry), allocatable :: entries(:)
     integer :: i
 
+    allocate(entries(0))
     info = lstat(path)
     if (.not. info%exists) then
       success = .false.
@@ -298,10 +317,9 @@ contains
     end if
 
     if (index(command, "/") > 0) then
-      if (is_file(command) .and. is_executable_path(command)) then
-        path = normalize_path(command)
-      else
-        path = ""
+      path = ""
+      if (is_file(command)) then
+        if (is_executable_path(command)) path = normalize_path(command)
       end if
       return
     end if
@@ -341,9 +359,11 @@ contains
         candidate = join_path(directory, command)
       end if
 
-      if (is_file(candidate) .and. is_executable_path(candidate)) then
-        path = normalize_path(candidate)
-        return
+      if (is_file(candidate)) then
+        if (is_executable_path(candidate)) then
+          path = normalize_path(candidate)
+          return
+        end if
       end if
 
       if (start_idx > len(search_path) .or. end_idx == 0) exit
@@ -370,6 +390,7 @@ contains
     type(path_info) :: info
     integer :: i
 
+    allocate(children(0))
     info = lstat(path)
     if (.not. info%exists) then
       total = 0
@@ -394,6 +415,7 @@ contains
     type(directory_entry) :: entry
     integer :: i
 
+    allocate(children(0))
     entry = make_directory_entry(path, depth)
     entries(next_index) = entry
     next_index = next_index + 1
